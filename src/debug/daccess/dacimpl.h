@@ -1102,6 +1102,7 @@ public:
     virtual HRESULT STDMETHODCALLTYPE GetAppDomainStoreData(struct DacpAppDomainStoreData *data);
     virtual HRESULT STDMETHODCALLTYPE GetAppDomainList(unsigned int count, CLRDATA_ADDRESS values[], unsigned int *pNeeded);
     virtual HRESULT STDMETHODCALLTYPE GetAppDomainData(CLRDATA_ADDRESS addr, struct DacpAppDomainData *data);
+    virtual HRESULT STDMETHODCALLTYPE GetAppDomainStatics(CLRDATA_ADDRESS addr, struct DacpAppDomainStatics *data);
     virtual HRESULT STDMETHODCALLTYPE GetAppDomainName(CLRDATA_ADDRESS addr, unsigned int count, __out_z __inout_ecount(count) wchar_t *name, unsigned int *pNeeded);
     virtual HRESULT STDMETHODCALLTYPE GetAssemblyList(CLRDATA_ADDRESS appDomain, int count, CLRDATA_ADDRESS values[], int *fetched);
     virtual HRESULT STDMETHODCALLTYPE GetAssemblyData(CLRDATA_ADDRESS baseDomainPtr, CLRDATA_ADDRESS assembly, struct DacpAssemblyData *data);

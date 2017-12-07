@@ -2354,6 +2354,30 @@ ClrDataAccess::GetAppDomainData(CLRDATA_ADDRESS addr, struct DacpAppDomainData *
 }
 
 HRESULT
+ClrDataAccess::GetAppDomainStatics(CLRDATA_ADDRESS addr, struct DacpAppDomainStatics *appdomainStatics)
+{
+    SOSDacEnter();
+    if (addr == 0)
+    {
+        hr = E_INVALIDARG;
+    }
+    else
+    {
+        PTR_BaseDomain pBaseDomain = PTR_BaseDomain(TO_TADDR(addr));
+
+        ZeroMemory(appdomainStatics, sizeof(DacpAppDomainStatics));
+        appdomainStatics->AppDomainPtr = PTR_CDADDR(pBaseDomain);
+        if (pBaseDomain->IsAppDomain())
+        {
+            AppDomain * pAppDomain = pBaseDomain->AsAppDomain();
+            appdomainStatics->pLargeHeapHandleTable = TO_CDADDR(pAppDomain->m_pLargeHeapHandleTable);
+        }
+    }
+    SOSDacLeave();
+    return hr;
+}
+
+HRESULT
 ClrDataAccess::GetFailedAssemblyData(CLRDATA_ADDRESS assembly, unsigned int *pContext, HRESULT *pResult)
 {
     if (assembly == NULL || (pContext == NULL && pResult == NULL))

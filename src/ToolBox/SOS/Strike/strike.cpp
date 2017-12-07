@@ -2000,6 +2000,88 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
     return S_OK;
 }
 
+DECLARE_API(DumpStatics)
+{
+    INIT_API();
+    MINIDUMP_NOT_SUPPORTED();
+
+    DWORD_PTR p_ModuleAddr = NULL;
+    BOOL dml = FALSE;
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+#ifndef FEATURE_PAL
+        { "/d", &dml, COBOOL, FALSE },
+#endif
+    };
+
+    CMDValue arg[] =
+    {   // vptr, type
+        { &p_ModuleAddr, COHEX }
+    };
+
+    size_t nArg;
+    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    {
+        return Status;
+    }
+
+    DacpModuleData module;
+    if ((Status = module.Request(g_sos, TO_CDADDR(p_ModuleAddr))) != S_OK)
+    {
+        ExtOut("Fail to fill Module %p\n", SOS_PTR(p_ModuleAddr));
+        return Status;
+    }
+
+    DacpDomainLocalModuleData domainLocalModule;
+    if (g_sos->GetDomainLocalModuleDataFromModule(p_ModuleAddr, &domainLocalModule) != S_OK)
+    {
+        ExtOut("Invalid DacpDomainLocalModuleData\n");
+        return Status;
+    }
+    
+    ExtOut("Assembly: %" POINTERSIZE "p\n", SOS_PTR(module.Assembly));
+
+    DacpAssemblyData assembly;
+    if (g_sos->GetAssemblyData(NULL, module.Assembly, &assembly) != S_OK)
+    {
+        ExtOut("Invalid DacpAssemblyData\n");
+        return Status;
+    }
+
+    ExtOut("Domain: %" POINTERSIZE "p\n", SOS_PTR(assembly.ParentDomain));
+    DacpAppDomainData appDomain;
+    if (g_sos->GetAppDomainData(assembly.ParentDomain, &appDomain) != S_OK)
+    {
+        ExtOut("Invalid DacpAppDomainData\n");
+        return Status;
+    }
+    
+    DacpAppDomainStatics appDomainStatics;
+    if (g_sos->GetAppDomainStatics(assembly.ParentDomain, &appDomainStatics) != S_OK)
+    {
+        ExtOut("Invalid DacpAppDomainData\n");
+        return Status;
+    }
+    
+    ExtOut("pLargeHeapHandleTable: %" POINTERSIZE "p\n", SOS_PTR(appDomainStatics.pLargeHeapHandleTable));
+    ExtOut("appDomainAddr:         %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.appDomainAddr));
+    ExtOut("pGCStaticDataStart   : %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.pGCStaticDataStart));
+    ExtOut("pNonGCStaticDataStart: %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.pNonGCStaticDataStart));
+
+    
+    return S_OK;
+
+}
+
+DECLARE_API(DumpHelloWorld)
+{
+    INIT_API();
+    MINIDUMP_NOT_SUPPORTED();
+
+    ExtOut("Hello world!\n");
+    return S_OK;
+}
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *

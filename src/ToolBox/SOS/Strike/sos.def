@@ -43,6 +43,11 @@ EXPORTS
     dumpmodule=DumpModule
     DumpMT
     dumpmt=DumpMT
+    DumpStatics
+    dumpstatics=DumpStatics
+    DumpHelloWorld
+    dhw=DumpHelloWorld
+    dumphelloworld=DumpHelloWorld
     DumpObj
     do=DumpObj
     dumpobj=DumpObj

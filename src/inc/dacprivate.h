@@ -443,6 +443,17 @@ struct MSLAYOUT DacpAppDomainData : ZeroInit<DacpAppDomainData>
     }
 };
 
+struct MSLAYOUT DacpAppDomainStatics : ZeroInit<DacpAppDomainStatics>
+{
+    CLRDATA_ADDRESS AppDomainPtr;
+    CLRDATA_ADDRESS pLargeHeapHandleTable;
+
+    HRESULT Request(ISOSDacInterface *sos, CLRDATA_ADDRESS addr)
+    {
+        return sos->GetAppDomainStatics(addr, this);
+    }
+};
+
 struct MSLAYOUT DacpAssemblyData : ZeroInit<DacpAssemblyData>
 {
     CLRDATA_ADDRESS AssemblyPtr; //useful to have

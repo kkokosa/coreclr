@@ -696,7 +696,11 @@ EXTERN_C const IID IID_ISOSDacInterface;
             CLRDATA_ADDRESS addr,
             struct DacpAppDomainData *data) = 0;
         
-        virtual HRESULT STDMETHODCALLTYPE GetAppDomainName( 
+        virtual HRESULT STDMETHODCALLTYPE GetAppDomainStatics(
+            CLRDATA_ADDRESS addr,
+            struct DacpAppDomainStatics *data) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetAppDomainName(
             CLRDATA_ADDRESS addr,
             unsigned int count,
             WCHAR *name,
