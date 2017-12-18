@@ -1045,6 +1045,7 @@ class BaseDomain
     friend class AssemblySpec;
     friend class AppDomain;
     friend class AppDomainNative;
+    friend class ClrDataAccess;
 
     VPTR_BASE_VTABLE_CLASS(BaseDomain)
     VPTR_UNIQUE(VPTR_UNIQUE_BaseDomain)
@@ -4666,6 +4667,7 @@ private:
     static CrstStatic m_DelayedUnloadCrst;
     static CrstStatic       m_SystemDomainCrst;
 
+    static GlobalStringLiteralMap *m_pGlobalStringLiteralMap;
 
     static ArrayListStatic  m_appDomainIdList;
 
@@ -4688,7 +4690,6 @@ private:
 
     static DWORD        m_dwLowestFreeIndex;
 #endif // DACCESS_COMPILE
-    static GlobalStringLiteralMap *m_pGlobalStringLiteralMap;
 
 protected:
 

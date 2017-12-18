@@ -2364,14 +2364,13 @@ ClrDataAccess::GetAppDomainStatics(CLRDATA_ADDRESS addr, struct DacpAppDomainSta
     else
     {
         PTR_BaseDomain pBaseDomain = PTR_BaseDomain(TO_TADDR(addr));
-
         ZeroMemory(appdomainStatics, sizeof(DacpAppDomainStatics));
         appdomainStatics->AppDomainPtr = PTR_CDADDR(pBaseDomain);
+        appdomainStatics->pLargeHeapHandleTable = TO_CDADDR(pBaseDomain->m_pLargeHeapHandleTable);
         if (pBaseDomain->IsAppDomain())
         {
             AppDomain * pAppDomain = pBaseDomain->AsAppDomain();
-            appdomainStatics->pLargeHeapHandleTable = TO_CDADDR(pAppDomain->m_pLargeHeapHandleTable);
-            appdomainStatics->systemDomain_pLargeHeapHandleTable = TO_CDADDR(SystemDomain::m_pSystemDomain->m_pGlobalStringLiteralMap);
+            //appdomainStatics->systemDomain_pLargeHeapHandleTable = TO_CDADDR(SystemDomain::m_pSystemDomain->m_pGlobalStringLiteralMap);
         }
     }
     SOSDacLeave();
