@@ -1803,6 +1803,7 @@ DECLARE_API(DumpArray)
         {"-length", &flags.Length, COSIZE_T, TRUE},
         {"-details", &flags.bDetail, COBOOL, FALSE},
         {"-nofields", &flags.bNoFieldsForElement, COBOOL, FALSE},
+        {"-short", &flags.bShort, COBOOL, FALSE },
 #ifndef FEATURE_PAL
         {"/d", &dml, COBOOL, FALSE},
 #endif
@@ -1973,7 +1974,13 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
             }
             else
             {
-                DMLOut(" %s\n", DMLObject(p_Element));
+                if (flags.bShort)
+                {
+                    sos::Object obj = p_Element;
+                    DMLOut(" %s %S\n", DMLObject(p_Element), obj.GetTypeName());
+                }
+                else
+                    DMLOut(" %s\n", DMLObject(p_Element));
             }
         }
         else if (!isPermSetPrint)
@@ -2005,7 +2012,7 @@ DECLARE_API(DumpStatics)
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR p_ModuleAddr = NULL;
+    DWORD_PTR p_DomainAddr = NULL;
     BOOL dml = FALSE;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
@@ -2016,7 +2023,7 @@ DECLARE_API(DumpStatics)
 
     CMDValue arg[] =
     {   // vptr, type
-        { &p_ModuleAddr, COHEX }
+        { &p_DomainAddr, COHEX }
     };
 
     size_t nArg;
@@ -2024,53 +2031,197 @@ DECLARE_API(DumpStatics)
     {
         return Status;
     }
+    EnableDMLHolder dmlHolder(dml);
 
-    DacpModuleData module;
-    if ((Status = module.Request(g_sos, TO_CDADDR(p_ModuleAddr))) != S_OK)
+    DacpAppDomainStoreData adsData;
+    if ((Status = adsData.Request(g_sos)) != S_OK)
     {
-        ExtOut("Fail to fill Module %p\n", SOS_PTR(p_ModuleAddr));
+        ExtOut("Unable to get AppDomain information\n");
         return Status;
     }
 
-    DacpDomainLocalModuleData domainLocalModule;
-    if (g_sos->GetDomainLocalModuleDataFromModule(p_ModuleAddr, &domainLocalModule) != S_OK)
-    {
-        ExtOut("Invalid DacpDomainLocalModuleData\n");
-        return Status;
-    }
-    
-    ExtOut("Assembly: %" POINTERSIZE "p\n", SOS_PTR(module.Assembly));
-
-    DacpAssemblyData assembly;
-    if (g_sos->GetAssemblyData(NULL, module.Assembly, &assembly) != S_OK)
-    {
-        ExtOut("Invalid DacpAssemblyData\n");
-        return Status;
-    }
-
-    ExtOut("Domain: %" POINTERSIZE "p\n", SOS_PTR(assembly.ParentDomain));
     DacpAppDomainData appDomain;
-    if (g_sos->GetAppDomainData(assembly.ParentDomain, &appDomain) != S_OK)
+    if (g_sos->GetAppDomainData(TO_CDADDR(p_DomainAddr), &appDomain) != S_OK)
     {
         ExtOut("Invalid DacpAppDomainData\n");
         return Status;
     }
-    
+
+    if (p_DomainAddr == adsData.sharedDomain)
+    {
+        ExtOut("Shared Domain!\n");
+    }
+    else if (p_DomainAddr == adsData.systemDomain)
+    {
+        ExtOut("System Domain!\n");
+    }
+    else
+    {
+        ExtOut("Domain %d\n", appDomain.dwId);
+    }
+
     DacpAppDomainStatics appDomainStatics;
-    if (g_sos->GetAppDomainStatics(assembly.ParentDomain, &appDomainStatics) != S_OK)
+    if (g_sos->GetAppDomainStatics(TO_CDADDR(p_DomainAddr), &appDomainStatics) != S_OK)
     {
-        ExtOut("Invalid DacpAppDomainData\n");
+        ExtOut("Invalid DacpAppDomainStatics\n");
         return Status;
     }
-    
-    ExtOut("pLargeHeapHandleTable: %" POINTERSIZE "p\n", SOS_PTR(appDomainStatics.pLargeHeapHandleTable));
-    ExtOut("appDomainAddr:         %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.appDomainAddr));
-    ExtOut("pGCStaticDataStart   : %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.pGCStaticDataStart));
-    ExtOut("pNonGCStaticDataStart: %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.pNonGCStaticDataStart));
 
-    
+    ExtOut("Domain assembly count: %d\n", appDomain.AssemblyCount);
+
+    // Modules and theirs statics
+    if (appDomain.AssemblyCount > 0)
+    {
+        ArrayHolder<CLRDATA_ADDRESS> pArray = new CLRDATA_ADDRESS[appDomain.AssemblyCount];
+        if (g_sos->GetAssemblyList(appDomain.AppDomainPtr, appDomain.AssemblyCount, pArray, NULL) != S_OK)
+        {
+            ExtOut("Unable to get array of Assemblies\n");
+            return Status;
+        }
+        LONG n;
+        for (n = 0; n < appDomain.AssemblyCount; n++)
+        {
+            DMLOut("Assembly:           %s", DMLAssembly(pArray[n]));
+            DacpAssemblyData assemblyData;
+            if (assemblyData.Request(g_sos, pArray[n], appDomain.AppDomainPtr) == S_OK)
+            {
+                if (g_sos->GetAssemblyName(pArray[n], mdNameLen, g_mdName, NULL) == S_OK)
+                    ExtOut("%S\n", g_mdName);
+
+                ArrayHolder<CLRDATA_ADDRESS> Modules = new CLRDATA_ADDRESS[assemblyData.ModuleCount];
+                if (g_sos->GetAssemblyModuleList(assemblyData.AssemblyPtr, assemblyData.ModuleCount, Modules, NULL) != S_OK)
+                {
+                    ExtOut("Unable to get array of Modules\n");
+                    return Status;
+                }
+                for (ULONG m = 0; m < assemblyData.ModuleCount; m++)
+                {
+                    CLRDATA_ADDRESS ModuleAddr = Modules[m];
+                    DMLOut("    Module:           %s\n", DMLModule(ModuleAddr));
+                    DacpDomainLocalModuleData domainLocalModule;
+                    if (g_sos->GetDomainLocalModuleDataFromModule(ModuleAddr, &domainLocalModule) == S_OK)
+                    {
+                        ExtOut("        pGCStaticDataStart   : %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.pGCStaticDataStart));
+                        ExtOut("        pNonGCStaticDataStart: %" POINTERSIZE "p\n", SOS_PTR(domainLocalModule.pNonGCStaticDataStart));
+                    }
+                }
+            }
+        }
+    }
+
+    // Large Heap Handle Table
+    ExtOut("LargeHeapHandleTable for statics/Reflection: %" POINTERSIZE "p\n", SOS_PTR(appDomainStatics.pLargeHeapHandleTable));
+    if (appDomainStatics.pLargeHeapHandleTable != NULL)
+    {
+        DacpLargeHeapHandleTable largeHeapHandleTable;
+        if (g_sos->GetLargeHeapHandleTable(appDomainStatics.pLargeHeapHandleTable, &largeHeapHandleTable) != S_OK)
+        {
+            ExtOut("Invalid DacpLargeHeapHandleTable\n");
+            return Status;
+        }
+
+        ExtOut("    LargeHeapHandleTable.HeadBucket:         %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleTable.HeadBucket));
+        ExtOut("    LargeHeapHandleTable.NextBucketSize:     %16d\n", largeHeapHandleTable.NextBucketSize);
+        ExtOut("    LargeHeapHandleTable.Domain:             %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleTable.Domain));
+
+        CLRDATA_ADDRESS currentBucket = largeHeapHandleTable.HeadBucket;
+        while (currentBucket != NULL)
+        {
+            ExtOut("        LargeHeapHandleBucket:              %" POINTERSIZE "p\n", SOS_PTR(currentBucket));
+
+            DacpLargeHeapHandleBucket largeHeapHandleBucket;
+            if (g_sos->GetLargeHeapHandleBucket(currentBucket, &largeHeapHandleBucket) != S_OK)
+            {
+                ExtOut("Invalid DacpLargeHeapHandleBucket\n");
+                return Status;
+            }
+
+            ExtOut("            LargeHeapHandleBucket.CurrentPos:     %d\n", largeHeapHandleBucket.CurrentPos);
+            ExtOut("            LargeHeapHandleBucket.ArraySize:      %d\n", largeHeapHandleBucket.ArraySize);
+            ExtOut("            LargeHeapHandleBucket.ArrayHandle:    %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleBucket.ArrayHandle));
+            ExtOut("            LargeHeapHandleBucket.ArrayObject:    %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleBucket.ArrayObject));
+            ExtOut("            LargeHeapHandleBucket.ArrayDataPtr:   %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleBucket.ArrayDataPtr));
+
+            // Dump array content
+            DacpObjectData objData;
+            if ((Status = objData.Request(g_sos, TO_CDADDR(largeHeapHandleBucket.ArrayObject))) != S_OK)
+            {
+                ExtOut("Invalid object\n");
+                return Status;
+            }
+
+            if (objData.ObjectType != OBJ_ARRAY)
+            {
+                ExtOut("Not an array, please use !DumpObj instead\n");
+                return S_OK;
+            }
+            DumpArrayFlags flags;
+            flags.bShort = true;
+            IncrementIndent(); IncrementIndent(); IncrementIndent();
+            PrintArray(objData, flags, FALSE);
+            DecrementIndent(); DecrementIndent(); DecrementIndent();
+
+            currentBucket = largeHeapHandleBucket.NextBucket;
+        }
+    }
+
+    // Large Heap Handle Table
+    ExtOut("LargeHeapHandleTable for strings: %" POINTERSIZE "p\n", SOS_PTR(appDomainStatics.systemDomain_pLargeHeapHandleTable));
+    if (appDomainStatics.systemDomain_pLargeHeapHandleTable != NULL)
+    {
+        DacpLargeHeapHandleTable largeHeapHandleTable;
+        if (g_sos->GetLargeHeapHandleTable(appDomainStatics.systemDomain_pLargeHeapHandleTable, &largeHeapHandleTable) != S_OK)
+        {
+            ExtOut("Invalid DacpLargeHeapHandleTable\n");
+            return Status;
+        }
+
+        ExtOut("    LargeHeapHandleTable.HeadBucket:         %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleTable.HeadBucket));
+        ExtOut("    LargeHeapHandleTable.NextBucketSize:     %16d\n", largeHeapHandleTable.NextBucketSize);
+        ExtOut("    LargeHeapHandleTable.Domain:             %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleTable.Domain));
+
+        CLRDATA_ADDRESS currentBucket = largeHeapHandleTable.HeadBucket;
+        while (currentBucket != NULL)
+        {
+            ExtOut("        LargeHeapHandleBucket:              %" POINTERSIZE "p\n", SOS_PTR(currentBucket));
+
+            DacpLargeHeapHandleBucket largeHeapHandleBucket;
+            if (g_sos->GetLargeHeapHandleBucket(currentBucket, &largeHeapHandleBucket) != S_OK)
+            {
+                ExtOut("Invalid DacpLargeHeapHandleBucket\n");
+                return Status;
+            }
+
+            ExtOut("            LargeHeapHandleBucket.CurrentPos:     %d\n", largeHeapHandleBucket.CurrentPos);
+            ExtOut("            LargeHeapHandleBucket.ArraySize:      %d\n", largeHeapHandleBucket.ArraySize);
+            ExtOut("            LargeHeapHandleBucket.ArrayHandle:    %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleBucket.ArrayHandle));
+            ExtOut("            LargeHeapHandleBucket.ArrayObject:    %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleBucket.ArrayObject));
+            ExtOut("            LargeHeapHandleBucket.ArrayDataPtr:   %" POINTERSIZE "p\n", SOS_PTR(largeHeapHandleBucket.ArrayDataPtr));
+
+            // Dump array content
+            DacpObjectData objData;
+            if ((Status = objData.Request(g_sos, TO_CDADDR(largeHeapHandleBucket.ArrayObject))) != S_OK)
+            {
+                ExtOut("Invalid object\n");
+                return Status;
+            }
+
+            if (objData.ObjectType != OBJ_ARRAY)
+            {
+                ExtOut("Not an array, please use !DumpObj instead\n");
+                return S_OK;
+            }
+            DumpArrayFlags flags;
+            flags.bShort = true;
+            IncrementIndent(); IncrementIndent(); IncrementIndent();
+            PrintArray(objData, flags, FALSE);
+            DecrementIndent(); DecrementIndent(); DecrementIndent();
+
+            currentBucket = largeHeapHandleBucket.NextBucket;
+        }
+    }
+
     return S_OK;
-
 }
 
 DECLARE_API(DumpHelloWorld)

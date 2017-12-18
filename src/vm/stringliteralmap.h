@@ -62,6 +62,7 @@ class GlobalStringLiteralMap
     // StringLiteralMap and StringLiteralEntry need to acquire the crst of the global string literal map.
     friend class StringLiteralMap;
     friend class StringLiteralEntry;
+    friend class ClrDataAccess;
 
 public:
     // Constructor and destructor.

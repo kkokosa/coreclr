@@ -683,7 +683,15 @@ EXTERN_C const IID IID_ISOSDacInterface;
     public:
         virtual HRESULT STDMETHODCALLTYPE GetThreadStoreData( 
             struct DacpThreadStoreData *data) = 0;
-        
+
+        virtual HRESULT STDMETHODCALLTYPE GetLargeHeapHandleTable(
+            CLRDATA_ADDRESS addr,
+            struct DacpLargeHeapHandleTable *data) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetLargeHeapHandleBucket(
+            CLRDATA_ADDRESS addr,
+            struct DacpLargeHeapHandleBucket *data) = 0;
+
         virtual HRESULT STDMETHODCALLTYPE GetAppDomainStoreData( 
             struct DacpAppDomainStoreData *data) = 0;
         

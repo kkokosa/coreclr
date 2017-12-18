@@ -447,10 +447,39 @@ struct MSLAYOUT DacpAppDomainStatics : ZeroInit<DacpAppDomainStatics>
 {
     CLRDATA_ADDRESS AppDomainPtr;
     CLRDATA_ADDRESS pLargeHeapHandleTable;
+    CLRDATA_ADDRESS systemDomain_pLargeHeapHandleTable;
 
     HRESULT Request(ISOSDacInterface *sos, CLRDATA_ADDRESS addr)
     {
         return sos->GetAppDomainStatics(addr, this);
+    }
+};
+
+struct MSLAYOUT DacpLargeHeapHandleTable : ZeroInit<DacpLargeHeapHandleTable>
+{
+    CLRDATA_ADDRESS HeadBucket;
+    CLRDATA_ADDRESS Domain;
+    DWORD NextBucketSize;
+
+    HRESULT Request(ISOSDacInterface *sos, CLRDATA_ADDRESS addr)
+    {
+        return sos->GetLargeHeapHandleTable(addr, this);
+    }
+};
+
+struct MSLAYOUT DacpLargeHeapHandleBucket : ZeroInit<DacpLargeHeapHandleBucket>
+{
+    CLRDATA_ADDRESS NextBucket;
+    int ArraySize;
+    int CurrentPos;
+    int CurrentEmbeddedFreePos;
+    CLRDATA_ADDRESS ArrayHandle;
+    CLRDATA_ADDRESS ArrayObject;
+    CLRDATA_ADDRESS ArrayDataPtr;
+
+    HRESULT Request(ISOSDacInterface *sos, CLRDATA_ADDRESS addr)
+    {
+        return sos->GetLargeHeapHandleBucket(addr, this);
     }
 };
 

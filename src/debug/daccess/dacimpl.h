@@ -1099,6 +1099,8 @@ public:
 
     // ISOSDacInterface
     virtual HRESULT STDMETHODCALLTYPE GetThreadStoreData(struct DacpThreadStoreData *data);
+    virtual HRESULT STDMETHODCALLTYPE GetLargeHeapHandleTable(CLRDATA_ADDRESS addr, struct DacpLargeHeapHandleTable *data);
+    virtual HRESULT STDMETHODCALLTYPE GetLargeHeapHandleBucket(CLRDATA_ADDRESS addr, struct DacpLargeHeapHandleBucket *data);
     virtual HRESULT STDMETHODCALLTYPE GetAppDomainStoreData(struct DacpAppDomainStoreData *data);
     virtual HRESULT STDMETHODCALLTYPE GetAppDomainList(unsigned int count, CLRDATA_ADDRESS values[], unsigned int *pNeeded);
     virtual HRESULT STDMETHODCALLTYPE GetAppDomainData(CLRDATA_ADDRESS addr, struct DacpAppDomainData *data);

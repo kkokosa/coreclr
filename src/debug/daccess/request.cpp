@@ -2371,11 +2371,57 @@ ClrDataAccess::GetAppDomainStatics(CLRDATA_ADDRESS addr, struct DacpAppDomainSta
         {
             AppDomain * pAppDomain = pBaseDomain->AsAppDomain();
             appdomainStatics->pLargeHeapHandleTable = TO_CDADDR(pAppDomain->m_pLargeHeapHandleTable);
+            appdomainStatics->systemDomain_pLargeHeapHandleTable = TO_CDADDR(SystemDomain::m_pSystemDomain->m_pGlobalStringLiteralMap);
         }
     }
     SOSDacLeave();
     return hr;
 }
+
+HRESULT
+ClrDataAccess::GetLargeHeapHandleTable(CLRDATA_ADDRESS addr, struct DacpLargeHeapHandleTable *largeHeapHandleTable)
+{
+    SOSDacEnter();
+    if (addr == 0)
+    {
+        hr = E_INVALIDARG;
+    }
+    else
+    {
+        LargeHeapHandleTable* pTable = PTR_LargeHeapHandleTable(TO_TADDR(addr));
+        ZeroMemory(largeHeapHandleTable, sizeof(DacpLargeHeapHandleTable));
+        largeHeapHandleTable->Domain = TO_CDADDR(pTable->m_pDomain);
+        largeHeapHandleTable->NextBucketSize = pTable->m_NextBucketSize;
+        largeHeapHandleTable->HeadBucket = TO_CDADDR(pTable->m_pHead);
+    }
+    SOSDacLeave();
+    return hr;
+}
+
+HRESULT
+ClrDataAccess::GetLargeHeapHandleBucket(CLRDATA_ADDRESS addr, struct DacpLargeHeapHandleBucket *largeHeapHandleBucket)
+{
+    SOSDacEnter();
+    if (addr == 0)
+    {
+        hr = E_INVALIDARG;
+    }
+    else
+    {
+        LargeHeapHandleBucket* pBucket = PTR_LargeHeapHandleBucket(TO_TADDR(addr));
+        ZeroMemory(largeHeapHandleBucket, sizeof(DacpLargeHeapHandleBucket));
+        largeHeapHandleBucket->ArraySize = pBucket->m_ArraySize;
+        largeHeapHandleBucket->CurrentPos = pBucket->m_CurrentPos;
+        largeHeapHandleBucket->CurrentEmbeddedFreePos = pBucket->m_CurrentEmbeddedFreePos;
+        largeHeapHandleBucket->NextBucket = TO_CDADDR(pBucket->m_pNext);
+        largeHeapHandleBucket->ArrayHandle = TO_CDADDR(pBucket->m_hndHandleArray);
+        largeHeapHandleBucket->ArrayObject = PTR_CDADDR(ObjectFromHandle(pBucket->m_hndHandleArray));
+        largeHeapHandleBucket->ArrayDataPtr = TO_CDADDR(pBucket->m_pArrayDataPtr);
+    }
+    SOSDacLeave();
+    return hr;
+}
+
 
 HRESULT
 ClrDataAccess::GetFailedAssemblyData(CLRDATA_ADDRESS assembly, unsigned int *pContext, HRESULT *pResult)

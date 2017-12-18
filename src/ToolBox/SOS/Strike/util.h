@@ -1693,9 +1693,10 @@ struct DumpArrayFlags
     BOOL bDetail;
     LPSTR strObject;
     BOOL bNoFieldsForElement;
+    BOOL bShort;
     
     DumpArrayFlags ()
-        : startIndex(0), Length((DWORD_PTR)-1), bDetail(FALSE), strObject (0), bNoFieldsForElement(FALSE)
+        : startIndex(0), Length((DWORD_PTR)-1), bDetail(FALSE), strObject (0), bNoFieldsForElement(FALSE), bShort(FALSE)
     {}
     ~DumpArrayFlags ()
     {

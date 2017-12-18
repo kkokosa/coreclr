@@ -598,6 +598,8 @@ private:
 // from an array contained in the large heap.
 class LargeHeapHandleBucket
 {
+    friend class ClrDataAccess;
+
 public:
     // Constructor and desctructor.
     LargeHeapHandleBucket(LargeHeapHandleBucket *pNext, DWORD Size, BaseDomain *pDomain, BOOL bCrossAD = FALSE);
@@ -651,6 +653,8 @@ private:
 // to objects stored in an array in the large object heap.
 class LargeHeapHandleTable
 {
+    friend class ClrDataAccess;
+
 public:
     // Constructor and desctructor.
     LargeHeapHandleTable(BaseDomain *pDomain, DWORD InitialBucketSize);
@@ -4679,12 +4683,12 @@ private:
     // even if have started unloading.
     static Thread *m_pAppDomainUnloadingThread;
 
-    static GlobalStringLiteralMap *m_pGlobalStringLiteralMap;
 
     static ULONG       s_dNumAppDomains;  // Maintain a count of children app domains.
 
     static DWORD        m_dwLowestFreeIndex;
 #endif // DACCESS_COMPILE
+    static GlobalStringLiteralMap *m_pGlobalStringLiteralMap;
 
 protected:
 
